@@ -1,0 +1,12 @@
+server:
+  port: 8001
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://47.100.203.32:3306/test?serverTimezone=UTC&characterEncoding=utf8&useUnicode=true&useSSL=false
+    username: root
+    password: 360617
+logging:
+  level:
+    com.ces.keyserver.dao : debug
+  config: classpath:log4j2-spring.xml # 指定log4j配置文件的位置

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>用户管理</title>
+    <script src="../js/jquery-3.5.1.js"></script>
+    <meta content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" name="viewport">
+    <link rel="stylesheet" href="../plugins/adminLTE/css/AdminLTE.css">
+    <link rel="stylesheet" href="../plugins/adminLTE/css/skins/_all-skins.min.css">
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="../js/bootstrap/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="../js/bootstrap/css/bootstrap.css">
+    <script src="../js/jqPaginator.min.js"></script>
+    <link href="../css/select2.css" rel="stylesheet">
+    <script src="../js/select2.js"></script>
+
+    <style>
+        #page {
+            height: 40px;
+            width: auto;
+            /*会作为块级元素显示,表格前后带有换行符*/
+            display: table;
+            margin: 0 auto;
+            text-align: center;
+            padding: 0;
+        }
+    </style>
+
+
+    <script type="text/javascript">
+        $(function () {
+            list(1,true);
+            $("#deptSel").select2();
+        });
+
+        var page ={pageNum:1,size:10,rowCount:0,pageCount:0,pageNo:1,query:""};
+
+        function list(pageNum,isFirst) {
+            //更新页码
+            page.pageNum=pageNum;
+
+            if(page.pageNo>page.pageNum){
+                page.pageNo=page.pageNum;
+            }
+
+            $.post("http://localhost:8001/user/list",page, function(result){
+                console.log(result.data);
+                var keys =result.data.data;
+                page.rowCount=result.data.rowCount;
+                page.pageCount=result.data.pageCount;
+                $("#tb").html("");
+                $.each(keys,function (i,e) {
+                    var listenKey = e.listenKey;
+                    if(listenKey===null){
+                        listenKey="";
+                    }
+                    $("#tb").append(
+                        "            <tr>\n" +
+                        "                <td class=\"sorting_asc\">"+e.id+"</td>\n" +
+                        "                <td class=\"sorting\">"+e.hostAddress+"</td>\n" +
+                        "                <td class=\"sorting\">"+e.deptName+"</td>\n" +
+                        "                <td class=\"sorting\">"+e.name+"</td>\n" +
+                        "                <td class=\"sorting\">"+listenKey+"</td>\n" +
+                        '<td><button type="button" class="btn bg-olive btn-xs" data-toggle="modal" data-target="#editModal" onclick="update('+e.id+')">修改</button>\n'+
+                        '<button type="button" class="btn bg-olive btn-xs" onclick="del('+e.id+')">删除</button></td>\n'+
+                        "            </tr>"
+                    );
+                });
+                //$("#brand").val("");
+                //第一次显示分页插件，后面需要更新数据即可
+                if(isFirst){
+                    $('#page').jqPaginator({
+                        pageSize:page.size,//每一页多少条记录
+                        totalCounts:page.rowCount,
+                        visiblePages: 5,
+                        currentPage: page.pageNo,
+
+                        first: '<li class="first"><a href="javascript:void(0);">首页</a></li>',
+                        prev: '<li class="prev"><a href="javascript:void(0);">上一页</a></li>',
+                        next: '<li class="next"><a href="javascript:void(0);">下一页</a></li>',
+                        last: '<li class="last"><a href="javascript:void(0);">尾页</a></li>',
+                        page: '<li class="page"><a href="javascript:void(0);">{{page}}</a></li>',
+                        onPageChange: function (pageNo) {
+                            console.log(pageNo);
+                            //通过的页码的改变，更新数据
+                            page.pageNo=pageNo;
+                            list(pageNo,false);
+                        }
+                    });
+                }
+            },"json");
+
+        }
+
+        //0新增,1修改
+        var modify = 0;
+        function add() {
+            modify=0;
+            $("#tid").css("display","none");
+            $("#hostAddress").val("");
+            $("#name").val("");
+            addDeptOption();
+        }
+
+        //添加部门下拉框
+        function addDeptOption() {
+            if(modify===0){
+                $("#deptSel").html('<option value="" disabled selected hidden>请选择部门</option>');
+            }else {
+                $("#deptSel").html('');
+            }
+            $.ajax({
+                url:"http://localhost:8001/dept/list",
+                async:false,
+                dataType: "json",
+                data:{},
+                success:function (result) {
+                    $.each(result.data,function (i,e) {
+                        $("#deptSel").append('<option value="'+e.id+'">'+e.deptName+'</option>');
+                    });
+                }
+            });
+        }
+
+        function update(id) {
+            modify=1;
+            $("#tid").show();
+            $.post("http://localhost:8001/user/getById",{id:id},function (result) {
+                var res = result.data;
+                $.each(res,function (i,e) {
+                    $("#editForm").find("[name="+i+"]").val(e);
+                });
+                addDeptOption();
+                $("#deptSel").find("option[value='"+res.deptId+"']").prop("selected",'selected');
+            },"json")
+        }
+
+        function edit() {
+            var formData = $("#editForm").serializeArray();
+            var json={};
+            $.each(formData,function () {
+                json[this.name]=this.value;
+            });
+            json.deptId=$("#deptSel option:selected").val();
+            json.deptName=$("#deptSel option:selected").text();
+            json.modify=modify;
+            if(json.deptId===""){
+                alert("请先选择部门");
+                return;
+            }
+            $.post("http://localhost:8001/user/edit",json,function (result) {
+                if(modify===0){
+                    if(!result.data){
+                        alert(result.message);
+                    }
+                }
+                list(page.pageNo,false);
+            },"json")
+        }
+
+        function del(id) {
+            $.post("http://localhost:8001/user/delete",{id:id},function (result) {
+                alert("删除成功");
+                list(page.pageNo,false);
+            },"json")
+        }
+
+    </script>
+
+</head>
+<body class="hold-transition skin-red sidebar-mini">
+<!-- .box-body -->
+<div class="box-header with-border">
+    <h3 class="box-title">用户管理</h3>
+</div>
+
+<div class="box-body">
+
+    <!-- 数据表格 -->
+    <div class="table-box">
+
+        <!--工具栏-->
+            <div class="pull-left">
+                <div class="form-group form-inline">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default" title="新增" data-toggle="modal" data-target="#editModal" onclick="add()"><i class="fa fa-file-o"></i>新增</button>
+                     </div>
+                </div>
+            </div>
+        <!--工具栏/-->
+
+        <!--数据列表-->
+        <table id="dataList" class="table table-bordered table-striped table-hover dataTable">
+            <thead style="text-align: center">
+            <tr>
+                <td>id</td>
+                <td>ip地址</td>
+                <td>部门</td>
+                <td>名字</td>
+                <td>监听键名</td>
+                <td>操作</td>
+            </tr>
+            </thead>
+            <tbody style="text-align: center" id="tb">
+            </tbody>
+        </table>
+        <!--数据列表/-->
+    </div>
+    <!-- 数据表格 /-->
+</div>
+<!-- /.box-body -->
+<!-- 编辑窗口 -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog" >
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h3 id="myModalLabel">编辑窗口</h3>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <table class="table table-bordered table-striped" width="800px">
+                        <tr id="tid" style="display: none" >
+                            <td>id</td>
+                            <td class="diy2">
+                                <input class="form-control" name="id" id="id" readonly="readonly" value="">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>部门</td>
+                            <td class="diy2">
+                                <select class="form-control" id="deptSel">
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>ip</td>
+                            <td class="diy2">
+                                <input class="form-control" name="hostAddress" id="hostAddress" value="">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>名字</td>
+                            <td class="diy2">
+                                <input class="form-control" name="name" id="name" value="">
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success" data-dismiss="modal" aria-hidden="true" onclick="edit()">确定</button>
+                <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">取消</button>
+            </div>
+        </div>
+    </div>
+</div>
+<ul class="pagination" id="page"></ul>
+</body>
+</html>

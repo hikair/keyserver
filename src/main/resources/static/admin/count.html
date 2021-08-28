@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>分析统计</title>
+    <script src="../js/jquery-3.5.1.js"></script>
+    <meta content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" name="viewport">
+    <link rel="stylesheet" href="../plugins/adminLTE/css/AdminLTE.css">
+    <link rel="stylesheet" href="../plugins/adminLTE/css/skins/_all-skins.min.css">
+    <link rel="stylesheet" href="../css/style.css">
+	<script src="../js/bootstrap/js/bootstrap.min.js"></script>
+	<link rel="stylesheet" href="../js/bootstrap/css/bootstrap.css">
+	<link href="../css/select2.css" rel="stylesheet">
+	<script src="../js/select2.js"></script>
+	<script src="../js/echarts.js"></script>
+
+	<script type="text/javascript">
+		$(function () {
+			addIpOption();
+			addDateOption();
+			getKeyNames();
+			$("#ipSel").select2();
+			$("#dateSel").select2();
+
+		});
+
+		function addIpOption() {
+			$.ajax({
+				url:"http://localhost:8001/key/getAllIps",
+				async:false,
+				dataType: "json",
+				data:{},
+				success:function (result) {
+					console.log(result.data);
+					var ips =result.data;
+					$.each(ips,function (i,e) {
+						$("#ipSel").append('<option>'+e.hostAddress+'</option>');
+					});
+				}
+			})
+		}
+
+		function addDateOption() {
+			$.ajax({
+				url:"http://localhost:8001/key/getAllDates",
+				async:false,
+				dataType:"json",
+				data:{},
+				success:function (result) {
+					console.log(result.data);
+					var dates =result.data;
+					$.each(dates,function (i,e) {
+						$("#dateSel").append('<option>'+e+'</option>');
+					});
+				}
+			})
+		}
+
+		function selAll() {
+			//有一个没选中就给全选上
+			var isAllSelect = true;
+			for(var i=0;i<count;i++){
+				if(!$("#check"+i).is(":checked")){
+					isAllSelect=false;
+				}
+			}
+			if(isAllSelect){
+				//都是打勾状态就全部取消打勾
+				for(var i=0;i<count;i++){
+					if($("#check"+i).is(":checked")){
+						$("#check"+i).prop("checked",false);
+					}
+				}
+				//全选复选框取消打勾
+				$("#selAll").prop("checked",false);
+
+			}else {
+				//给没有打勾的打上勾
+				for(var i=0;i<count;i++){
+					if(!$("#check"+i).is(":checked")){
+						$("#check"+i).prop("checked",true);
+					}
+				}
+			}
+			list2();
+		}
+
+		//要有一个方法,一个按键复选框按下就要判断全选复选框要不要改变
+		function checkAndList(id) {
+			//判断点击后是什么状态
+			if($("#check"+id).is(":checked")){
+				//打勾状态,判断其他所有复选框是不是都是打勾状态,是的话就给全选复选框打勾
+				//有一个没选中就给全选上
+				var isAllSelect = true;
+				for(var i=0;i<count;i++){
+					if(!$("#check"+i).is(":checked")){
+						isAllSelect=false;
+					}
+				}
+				if(isAllSelect){
+					$("#selAll").prop("checked",true);
+				}
+			}else{
+				//非打勾状态,全选复选框取消打勾
+				$("#selAll").prop("checked",false);
+			}
+			list2();
+		}
+
+		var count=0;
+
+		function getKeyNames() {
+			count=0;
+			$("#keyCheck").html('' +
+					'<label class="checkbox-inline">' +
+					'   <input type="checkbox" checked="checked" id="selAll" onchange="selAll()" value="selAll">全选'+
+					'</label>');
+			var ip = $("#ipSel option:selected").val();
+			console.log("ip:"+ip);
+			var date = $("#dateSel option:selected").val();
+			console.log("date:"+date);
+
+			$.ajax({
+				url:"http://localhost:8001/user/getKeyNames",
+				async:false,
+				dateType:"json",
+				data:{hostAddress:ip},
+				success:function (result) {
+					var keyNames = result.data;
+					$.each(keyNames,function (i,e) {
+						//console.log(e);
+						count++;
+						$("#keyCheck").append('' +
+								'<label class="checkbox-inline">' +
+								'   <input type="checkbox" checked="checked" id='+'"check'+i+'" onchange="checkAndList('+i+')" value="'+e+'">' + e +
+								'</label>');
+					})
+				}
+			});
+			list2(0);
+		}
+
+        var flag = 0;
+        var oneDay = 24 * 3600 *1000;
+        //刻度,决定视图最小单位
+        var scale = 60 * 1000;
+		var myChart;
+        //===========================================================
+        var timestr;
+
+        //把原数据改成2020/12/19 00:00:00一样的格式
+        function changeData(datain) {
+            var startTime = +new Date(timestr)-scale;
+            var liuru = [];
+            var length;
+            if(flag === 0){
+                length = 1440;
+            }else {
+                length = 24;
+            }
+            for (var i = 0; i < length; i++) {
+                startTime = new Date(+startTime + scale);
+                liuru.push(chartData(i,datain,startTime));
+            }
+            return liuru;
+        }
+
+        //用来返回2020/12/19 00:00:00一样的数据格式
+        function chartData(i,data,now) {
+            return {
+                value: [
+                    riqigeshi(now),
+                    data[i]
+                ]
+            }
+        }
+
+        //把new Date出来的时间格式转换为2020/12/19 00:00:00的日期格式
+        function riqigeshi(now){
+            return now.toLocaleDateString() + ' ' + now.getHours() + now.toLocaleTimeString().substr(-6,6)
+        }
+
+        //===========================================================
+
+		function list2(num) {
+            if(num === 0){
+                flag = 0;
+                scale = 60 * 1000;
+            }else {
+                flag = 1;
+                scale = 3600 * 1000;
+            }
+			var hostAddress = $("#ipSel option:selected").val();
+			var createDate = $("#dateSel option:selected").val();
+            timestr= $("#dateSel option:selected").val()+" 00:00:00";
+
+			var keyNames = "";
+			for(var i=0;i<count;i++){
+				if($("#check"+i).is(":checked")){
+					keyNames += $("#check"+i).val();
+					if(i!==count-1){
+						keyNames+=",";
+					}
+				}
+			}
+			console.log(keyNames);
+
+			$.ajax({
+				url:"http://localhost:8001/key/list3",
+				async:false,
+				dataType:"json",
+				data:{hostAddress:hostAddress,createDate:createDate,keyNames:keyNames,flag:flag},
+				success:function (result) {
+					var res = [];
+					var data = [];
+					var i = 0;
+					var map = result.data;
+					for(var key in map){
+                        res[i]=key;
+						data[i]=map[key];
+						i++;
+					}
+
+					if (myChart != null && myChart !== "" && myChart !== undefined) {
+						myChart.dispose();//销毁
+					}
+					myChart = echarts.init(document.getElementById('main'));
+					setTimeout(function () {
+						var option = {
+							title: {
+								text: ''
+							},
+							tooltip: {
+								trigger: 'axis'
+							},
+							legend: {
+								data: function () {
+									return res;
+								}()
+							},
+							grid: {
+								x:'3.6%',
+								y:'5%',
+								x2:'2.4%',
+								y2:'12%'
+							},
+							toolbox: {
+								feature: {
+									saveAsImage: {}
+								}
+							},
+							xAxis: {
+								type:'time',
+								splitNumber:24
+							},
+							yAxis: {
+								type: 'value',
+								axisLabel:{
+									formatter:'{value} 次'
+								}
+							},
+							dataZoom: [
+								{
+									type: 'slider',//数据滑块
+									start:0,
+									minSpan:8,    //5min
+									dataBackground:{
+										lineStyle:{
+											color:'#95BC2F'
+										},
+										areaStyle:{
+											color:'#95BC2F',
+											opacity:1,
+										}
+									}
+								},
+								{
+									type:'inside'//使鼠标在图表中时滚轮可用
+								}
+							],
+
+                            //date =  dateSel当前选中的+ 00:00:00
+                            //data 就是  [日期,次数]
+							series: function () {
+								var serie = [];
+								for(var i=0;i<res.length;i++){
+                                    var liuru = changeData(data[i]);
+                                    var liuruShift = liuru.shift();
+                                    var liuruShiftVal = liuruShift.value[1];
+                                    var newlrtime = riqigeshi(new Date(new Date(liuruShift.value[0])+oneDay+scale));
+                                    liuru.push({value:[newlrtime,liuruShiftVal]});
+									var item={name:res[i],type: 'line',showSymbol:false,symbolSize:12,data:liuru};
+									serie.push(item);
+
+                                }
+								return serie;
+							}()
+						};
+						myChart.setOption(option);
+
+					});
+				}
+			})
+		}
+
+	</script>
+
+</head>
+<body class="hold-transition skin-red sidebar-mini">
+  <!-- .box-body -->
+                    <div class="box-header with-border">
+                        <h3 class="box-title">分析统计</h3>
+                    </div>
+
+                    <div class="box-body">
+
+                        <!-- 数据表格 -->
+                        <div class="table-box">
+
+                            <!--工具栏-->
+                            <div class="pull-left">
+                                <div class="form-group form-inline">
+ 									<select class="form-control" id="ipSel" onchange="getKeyNames()">
+									</select>
+									<select class="form-control" id="dateSel" onchange="getKeyNames()">
+									</select>
+									<button class="btn btn-default" onclick="list2(0)">分视图</button>
+									<button class="btn btn-default" onclick="list2(1)">时视图</button>
+                                </div>
+
+								<div class="form-group form-inline">
+									请勾选统计按键:
+									<div id="keyCheck">
+									</div>
+								</div>
+                            </div>
+                            <div class="pull-right">
+                                <div class="form-group form-inline">
+                                    <button class="btn btn-default" onclick="list2(flag)">刷新</button>
+                                </div>
+                            </div>
+                            <!--工具栏/-->
+							<!-- 为ECharts准备一个具备大小（宽高）的Dom -->
+							<div id="main" style="width: 1200px;height:500px; top:100px"></div>
+			                  <!--数据列表/-->
+                        </div>
+                        <!-- 数据表格 /-->
+                     </div>
+                    <!-- /.box-body -->
+</body>
+</html>

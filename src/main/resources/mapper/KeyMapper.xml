@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zpq.dao.KeyListenerDao" >
+    <select id="getAllDates" resultType="string">
+        select distinct DATE_FORMAT(create_date,'%Y-%m-%d') from key_listener ORDER BY create_date desc
+    </select>
+
+    <select id="getKeyNames" resultType="string" parameterType="java.util.Map">
+        select DISTINCT key_name from key_listener
+        where host_address=#{ip} and DATE_FORMAT(create_date,'%Y-%m-%d') = #{date};
+    </select>
+
+    <select id="countKey" resultType="string" parameterType="java.util.Map">
+        select create_date from key_listener where host_address=#{hostAddress} and key_name=#{keyNames} and DATE_FORMAT(create_date,'%Y-%m-%d')=DATE_FORMAT(#{createDate},'%Y-%m-%d') order by create_date asc
+    </select>
+
+    <select id="count" resultType="int" parameterType="java.util.Map">
+select count(1) from key_listener where host_address=#{hostAddress} and key_name=#{keyNames} and DATE_FORMAT(create_date,'%Y-%m-%d')=DATE_FORMAT(#{createDate},'%Y-%m-%d') and hour(create_date)=9
+union all
+select count(1) from key_listener where host_address=#{hostAddress} and key_name=#{keyNames} and DATE_FORMAT(create_date,'%Y-%m-%d')=DATE_FORMAT(#{createDate},'%Y-%m-%d') and hour(create_date)=10
+union all
+select count(1) from key_listener where host_address=#{hostAddress} and key_name=#{keyNames} and DATE_FORMAT(create_date,'%Y-%m-%d')=DATE_FORMAT(#{createDate},'%Y-%m-%d') and hour(create_date)=11
+union all
+select count(1) from key_listener where host_address=#{hostAddress} and key_name=#{keyNames} and DATE_FORMAT(create_date,'%Y-%m-%d')=DATE_FORMAT(#{createDate},'%Y-%m-%d') and hour(create_date)=12
+union all
+select count(1) from key_listener where host_address=#{hostAddress} and key_name=#{keyNames} and DATE_FORMAT(create_date,'%Y-%m-%d')=DATE_FORMAT(#{createDate},'%Y-%m-%d') and hour(create_date)=13
+union all
+select count(1) from key_listener where host_address=#{hostAddress} and key_name=#{keyNames} and DATE_FORMAT(create_date,'%Y-%m-%d')=DATE_FORMAT(#{createDate},'%Y-%m-%d') and hour(create_date)=14
+union all
+select count(1) from key_listener where host_address=#{hostAddress} and key_name=#{keyNames} and DATE_FORMAT(create_date,'%Y-%m-%d')=DATE_FORMAT(#{createDate},'%Y-%m-%d') and hour(create_date)=15
+union all
+select count(1) from key_listener where host_address=#{hostAddress} and key_name=#{keyNames} and DATE_FORMAT(create_date,'%Y-%m-%d')=DATE_FORMAT(#{createDate},'%Y-%m-%d') and hour(create_date)=16
+union all
+select count(1) from key_listener where host_address=#{hostAddress} and key_name=#{keyNames} and DATE_FORMAT(create_date,'%Y-%m-%d')=DATE_FORMAT(#{createDate},'%Y-%m-%d') and hour(create_date)=17
+union all
+select count(1) from key_listener where host_address=#{hostAddress} and key_name=#{keyNames} and DATE_FORMAT(create_date,'%Y-%m-%d')=DATE_FORMAT(#{createDate},'%Y-%m-%d') and hour(create_date)=18
+    </select>
+</mapper>

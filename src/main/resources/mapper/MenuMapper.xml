@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zpq.dao.MenuDao" >
+    <resultMap id="BaseResultMap" type="com.zpq.model.Menu">
+        <id column="id" property="id" />
+        <result column="auth_name" property="authName" jdbcType="VARCHAR" />
+        <collection property="children" ofType="com.zpq.model.Menu" select="getChildren" column="id">
+            <id column="id" property="id" />
+            <result column="auth_name" property="authName" jdbcType="VARCHAR" />
+        </collection>
+    </resultMap>
+    <select id="list" resultMap="BaseResultMap">
+        select id,auth_name,path,parent_id from menu where parent_id = 0
+    </select>
+
+    <select id="getChildren" parameterType="int" resultType="com.zpq.model.Menu">
+        select id,auth_name,path,parent_id from menu where parent_id=#{id}
+    </select>
+</mapper>

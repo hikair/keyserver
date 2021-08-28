@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zpq.dao.KeyUserDao" >
+    <update id="updateByIp" parameterType="com.zpq.model.KeyUser">
+        UPDATE key_user SET name=#{name},dept_id=#{deptId},dept_name=#{deptName},listen_key=#{listenKey} WHERE host_address=#{hostAddress}
+    </update>
+
+    <update id="updateListenKeyById" parameterType="com.zpq.model.KeyUser">
+        UPDATE key_user SET listen_key=#{listenKey} WHERE id=#{id}
+    </update>
+
+    <select id="getNameOrIpList" resultType="string" parameterType="string">
+        select name from key_user where name like concat('%',#{query},'%') or host_address like concat('%',#{query},'%')
+    </select>
+</mapper>

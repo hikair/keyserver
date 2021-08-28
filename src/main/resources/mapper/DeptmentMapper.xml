@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zpq.dao.DeptmentDao" >
+    <resultMap id="BaseResultMap" type="com.zpq.model.Deptment">
+        <id column="id" property="id" />
+        <result column="dept_name" property="deptName" jdbcType="VARCHAR" />
+        <collection property="keyTemplates" ofType="com.zpq.model.KeyTemplate" select="getTemplate" column="id">
+            <id column="template_id" property="templateId" />
+            <result column="template_name" property="templateName" jdbcType="VARCHAR" />
+            <result column="dept_id" property="deptId" />
+            <result column="dept_name" property="deptName" />
+            <result column="key_names" property="keyNames" />
+        </collection>
+    </resultMap>
+    <select id="getAllDeptWithTemplate" resultMap="BaseResultMap">
+        select id,dept_name from dept
+    </select>
+
+    <select id="getTemplate" parameterType="int" resultType="com.zpq.model.KeyTemplate">
+        select template_id,template_name,dept_id,dept_name,key_names from key_template where dept_id=#{id}
+    </select>
+</mapper>

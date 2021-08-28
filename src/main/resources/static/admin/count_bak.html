@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>分析统计</title>
+    <script src="../js/jquery-3.5.1.js"></script>
+    <meta content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" name="viewport">
+    <link rel="stylesheet" href="../plugins/adminLTE/css/AdminLTE.css">
+    <link rel="stylesheet" href="../plugins/adminLTE/css/skins/_all-skins.min.css">
+    <link rel="stylesheet" href="../css/style.css">
+	<script src="../js/bootstrap/js/bootstrap.min.js"></script>
+	<link rel="stylesheet" href="../js/bootstrap/css/bootstrap.css">
+	<link href="../css/select2.css" rel="stylesheet">
+	<script src="../js/select2.js"></script>
+	<script src="../js/echarts.js"></script>
+
+	<style>
+		#page {
+			height: 40px;
+			width: auto;
+			/*会作为块级元素显示,表格前后带有换行符*/
+			display: table;
+			margin: 0 auto;
+			text-align: center;
+			padding: 0;
+		}
+	</style>
+
+
+	<script type="text/javascript">
+		$(function () {
+			addIpOption();
+			addDateOption();
+			getKeyNames();
+			$("#ipSel").select2();
+			$("#dateSel").select2();
+		});
+
+		var existNum = [];
+
+		function addIpOption() {
+			$.ajax({
+				url:"http://localhost:8001/key/getAllIps",
+				async:false,
+				dataType: "json",
+				data:{},
+				success:function (result) {
+					console.log(result.data);
+					var ips =result.data;
+					$.each(ips,function (i,e) {
+						$("#ipSel").append('<option>'+e.hostAddress+'</option>');
+					});
+				}
+			})
+		}
+
+		function addDateOption() {
+			$.ajax({
+				url:"http://localhost:8001/key/getAllDates",
+				async:false,
+				dataType:"json",
+				data:{},
+				success:function (result) {
+					console.log(result.data);
+					var dates =result.data;
+					$.each(dates,function (i,e) {
+						$("#dateSel").append('<option>'+e+'</option>');
+					});
+				}
+			})
+		}
+
+		function selAll() {
+			//有一个没选中就给全选上
+			var isAllSelect = true;
+			for(var i=0;i<count;i++){
+				if(!$("#check"+i).is(":checked")){
+					isAllSelect=false;
+				}
+			}
+			if(isAllSelect){
+				//都是打勾状态就全部取消打勾
+				for(var i=0;i<count;i++){
+					if($("#check"+i).is(":checked")){
+						$("#check"+i).prop("checked",false);
+					}
+				}
+				//全选复选框取消打勾
+				$("#selAll").prop("checked",false);
+
+			}else {
+				//给没有打勾的打上勾
+				for(var i=0;i<count;i++){
+					if(!$("#check"+i).is(":checked")){
+						$("#check"+i).prop("checked",true);
+					}
+				}
+			}
+			list2();
+		}
+
+		//要有一个方法,一个按键复选框按下就要判断全选复选框要不要改变
+		function checkAndList(id) {
+			//判断点击后是什么状态
+			if($("#check"+id).is(":checked")){
+				//打勾状态,判断其他所有复选框是不是都是打勾状态,是的话就给全选复选框打勾
+				//有一个没选中就给全选上
+				var isAllSelect = true;
+				for(var i=0;i<count;i++){
+					if(!$("#check"+i).is(":checked")){
+						isAllSelect=false;
+					}
+				}
+				if(isAllSelect){
+					$("#selAll").prop("checked",true);
+				}
+			}else{
+				//非打勾状态,全选复选框取消打勾
+				$("#selAll").prop("checked",false);
+			}
+			list2();
+		}
+
+		var count=0;
+
+		function getKeyNames() {
+			count=0;
+			$("#keyCheck").html('' +
+					'<label class="checkbox-inline">' +
+					'   <input type="checkbox" checked="checked" id="selAll" onchange="selAll()" value="selAll">全选'+
+					'</label>');
+			var ip = $("#ipSel option:selected").val();
+			console.log("ip:"+ip);
+			var date = $("#dateSel option:selected").val();
+			console.log("date:"+date);
+
+			$.ajax({
+				url:"http://localhost:8001/user/getKeyNames",
+				async:false,
+				dateType:"json",
+				data:{hostAddress:ip},
+				success:function (result) {
+					var keyNames = result.data;
+					$.each(keyNames,function (i,e) {
+						//console.log(e);
+						count++;
+						$("#keyCheck").append('' +
+								'<label class="checkbox-inline">' +
+								'   <input type="checkbox" checked="checked" id='+'"check'+i+'" onchange="checkAndList('+i+')" value="'+e+'">' + e +
+								'</label>');
+					})
+				}
+			});
+
+			list2();
+		}
+
+		var myChart;
+		function list2() {
+			var hostAddress = $("#ipSel option:selected").val();
+			var createDate = $("#dateSel option:selected").val();
+
+			var keyNames = "";
+			for(var i=0;i<count;i++){
+				if($("#check"+i).is(":checked")){
+					keyNames += $("#check"+i).val();
+					if(i!==count-1){
+						keyNames+=",";
+					}
+				}
+			}
+			console.log(keyNames);
+
+			$.ajax({
+				url:"http://localhost:8001/key/list2",
+				async:false,
+				dataType:"json",
+				data:{hostAddress:hostAddress,createDate:createDate,keyNames:keyNames},
+				success:function (result) {
+					if(view){
+
+						var res = [];
+						var data = [];
+						var i = 0;
+						var map = result.data;
+						for(var key in map){
+							var temp = [key];
+							res[i] = temp.concat(map[key]);
+							console.log("res[i]="+res[i]);
+							data[i]=map[key];
+							i++;
+						}
+
+						if (myChart != null && myChart !== "" && myChart !== undefined) {
+							myChart.dispose();//销毁
+						}
+						myChart = echarts.init(document.getElementById('main'));
+						setTimeout(function () {
+							option = {
+								title: {
+									text: ''
+								},
+								tooltip: {
+									trigger: 'axis'
+								},
+								legend: {
+									data: function () {
+										var names = [];
+										for(var i=0;i<res.length;i++){
+											names[i]=res[i][0];
+										}
+										return names;
+									}()
+								},
+								grid: {
+									left: '3%',
+									right: '4%',
+									bottom: '3%',
+									containLabel: true
+								},
+								toolbox: {
+									feature: {
+										saveAsImage: {}
+									}
+								},
+								xAxis: {
+									type: 'category',
+									boundaryGap: false,
+									data: ['9-10', '10-11', '11-12', '12-13', '13-14', '14-15', '15-16', '16-17', '17-18','18-19']
+								},
+								yAxis: {
+									type: 'value'
+								},
+								series: function () {
+									var serie = [];
+									for(var i=0;i<data.length;i++){
+										var item={name:res[i][0],type: 'line',data:data[i]};
+										serie.push(item);
+									}
+									return serie;
+								}()
+							};
+							myChart.setOption(option);
+
+						});
+
+					}else {
+						//表格显示================================================================================================
+						$("#tb").html("");
+						var map = result.data;
+						existNum = [];
+						var j=0;
+						for(var key in map){
+							var data = map[key];
+							console.log(data.length);
+							for(var i=0;i<data.length;i++){
+								if(data[i]>0){
+									existNum[j++]=key+i;
+								}
+							}
+							$("#tb").append(
+									'<tr>\n' +
+									'  <td>'+key+'</td>\n' +
+									'  <td id="'+key+'0">'+map[key][0]+'</td>\n' +
+									'  <td id="'+key+'1">'+map[key][1]+'</td>\n' +
+									'  <td id="'+key+'2">'+map[key][2]+'</td>\n' +
+									'  <td id="'+key+'3">'+map[key][3]+'</td>\n' +
+									'  <td id="'+key+'4">'+map[key][4]+'</td>\n' +
+									'  <td id="'+key+'5">'+map[key][5]+'</td>\n' +
+									'  <td id="'+key+'6">'+map[key][6]+'</td>\n' +
+									'  <td id="'+key+'7">'+map[key][7]+'</td>\n' +
+									'  <td id="'+key+'8">'+map[key][8]+'</td>\n' +
+									'  <td id="'+key+'9">'+map[key][9]+'</td>\n' +
+									'</tr>'
+							);
+						}
+						for(var i=0;i<existNum.length;i++){
+							$("#"+existNum[i]).css("background-color","red");
+						}
+
+					}
+				}
+			})
+		}
+
+		//true图表显示,false表格显示
+		var view = true;
+		function changeView() {
+			view = !view;
+			if(view){
+				$("#main").show();
+				$("#dataList").css("display","none");
+			}else {
+				$("#dataList").show();
+				$("#main").css("display","none");
+			}
+			list2();
+		}
+
+	</script>
+
+</head>
+<body class="hold-transition skin-red sidebar-mini">
+  <!-- .box-body -->
+                    <div class="box-header with-border">
+                        <h3 class="box-title">分析统计</h3>
+                    </div>
+
+                    <div class="box-body">
+
+                        <!-- 数据表格 -->
+                        <div class="table-box">
+
+                            <!--工具栏-->
+                            <div class="pull-left">
+                                <div class="form-group form-inline">
+ 									<select class="form-control" id="ipSel" onchange="getKeyNames()">
+									</select>
+									<select class="form-control" id="dateSel" onchange="getKeyNames()">
+									</select>
+									<button class="btn btn-default" onclick="changeView()">切换显示</button>
+									<button class="btn btn-default" onclick="list2()">刷新</button>
+                                </div>
+
+								<div class="form-group form-inline">
+									请勾选统计按键:
+
+									<div id="keyCheck">
+									</div>
+								</div>
+                            </div>
+                            <!--工具栏/-->
+
+			                  <!--数据列表-->
+			                  <table id="dataList" class="table table-bordered table-striped table-hover dataTable" style="display: none">
+								  <thead style="text-align: center">
+								  <tr>
+									  <td>按键名\时间段</td>
+									  <td>9-10</td>
+									  <td>10-11</td>
+									  <td>11-12</td>
+									  <td>12-13</td>
+									  <td>13-14</td>
+									  <td>14-15</td>
+									  <td>15-16</td>
+									  <td>16-17</td>
+									  <td>17-18</td>
+									  <td>18-19</td>
+								  </tr>
+								  </thead>
+			                      <tbody style="text-align: center" id="tb">
+			                      </tbody>
+			                  </table>
+							<!-- 为ECharts准备一个具备大小（宽高）的Dom -->
+							<div id="main" style="width: 1200px;height:500px; top:100px"></div>
+			                  <!--数据列表/-->
+                        </div>
+                        <!-- 数据表格 /-->
+                     </div>
+                    <!-- /.box-body -->
+</body>
+</html>
